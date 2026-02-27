@@ -33,17 +33,6 @@ Live Pid is a RuneLite PvP plugin by **Noid** that displays your current PID sta
 - This plugin does not modify outgoing chat or account credentials.
 - This plugin is Java 11 compatible and packaged for RuneLite Plugin Hub workflows.
 
-## Development
-
-```bash
-./gradlew clean build
-./gradlew run
-```
-
-Sideloaded jar output:
-
-`build/libs/live-pid-plugin-1.0-SNAPSHOT.jar`
-
 ## Links
 
 - Source: https://github.com/Noid-Plugins/live-pid-plugin
