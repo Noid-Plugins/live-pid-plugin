@@ -31,17 +31,6 @@ PID colors:
 
 `Hide Out Of Combat` hides the indicator after 25 ticks with no own attack animation detected.
 
-## Compliance
-
-`Live Pid` is prepared for RuneLite Plugin Hub review:
-
-- Java-only plugin implementation
-- No automation behavior
-- No credential/profile management logic
-- No prohibited runtime techniques (reflection/JNI/subprocess/runtime code download)
-
-Review checklist: [RuneLite Submission Guide](../PLUGIN_HUB_SETUP.md)
-
 ## Repository
 
 - Source: `https://github.com/Noid-Plugins/live-pid-plugin`

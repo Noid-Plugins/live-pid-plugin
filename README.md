@@ -26,18 +26,6 @@ PID colors:
 - `Text Size`: above-head label font size
 - `Hide Out Of Combat`: hides indicator after 25 ticks without your own detected attack animation
 
-## RuneLite Plugin Hub Readiness
-
-This repository is prepared for Plugin Hub submission and review:
-
-- Public GitHub repository
-- Java-only implementation
-- No reflection, JNI, subprocess execution, or runtime code download
-- No account credential storage or external data exfiltration
-- Metadata provided in `runelite-plugin.properties`
-
-Full checklist: [PLUGIN_HUB_SETUP.md](./PLUGIN_HUB_SETUP.md)
-
 ## Build And Run
 
 ```bash
@@ -48,4 +36,3 @@ Full checklist: [PLUGIN_HUB_SETUP.md](./PLUGIN_HUB_SETUP.md)
 ## Project Links
 
 - Repository documentation page: `https://noid-plugins.github.io/live-pid-plugin/`
-- Plugin Hub manifest example: [PLUGIN_HUB_MANIFEST_EXAMPLE.txt](./PLUGIN_HUB_MANIFEST_EXAMPLE.txt)
