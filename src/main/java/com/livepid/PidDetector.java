@@ -20,9 +20,11 @@ public class PidDetector
 	private static final int MAX_PENDING_SAMPLES = 24;
 	private static final int MAX_SAMPLE_AGE_TICKS = 16;
 	private static final int MAX_HIT_DELAY_TICKS = 12;
+	private static final int EARLY_HITSPLAT_TOLERANCE_TICKS = 1;
 
 	private final Client client;
 	private final Deque<AttackSample> pendingSamples = new ArrayDeque<>();
+	private final Deque<OutgoingHitsplatSample> pendingHitsplats = new ArrayDeque<>();
 
 	private Player currentTarget;
 	private volatile PidStatus currentPidStatus = PidStatus.UNKNOWN;
@@ -56,6 +58,7 @@ public class PidDetector
 		}
 
 		pruneExpiredSamples(client.getTickCount());
+		pruneExpiredHitsplats(client.getTickCount());
 		if (currentTarget == null && pendingSamples.isEmpty())
 		{
 			currentPidStatus = PidStatus.UNKNOWN;
@@ -88,30 +91,31 @@ public class PidDetector
 		{
 			return;
 		}
-
-		currentTarget = target;
-		if (pendingSamples.size() >= MAX_PENDING_SAMPLES)
-		{
-			pendingSamples.removeFirst();
-		}
-
-		pendingSamples.addLast(new AttackSample(
-			client.getTickCount(),
-			target.getName(),
-			distance,
-			bucket
-		));
-	}
-
-	public void onHitsplatApplied(HitsplatApplied event)
-	{
-		if (pendingSamples.isEmpty() || !(event.getActor() instanceof Player))
+		String targetName = target.getName();
+		if (targetName == null)
 		{
 			return;
 		}
 
-		Hitsplat hitsplat = event.getHitsplat();
-		if (hitsplat == null || !isLocalOutgoingHitsplat(hitsplat))
+		currentTarget = target;
+		AttackSample sample = new AttackSample(client.getTickCount(), targetName, distance, bucket);
+		OutgoingHitsplatSample hitsplatSample = findMatchingHitsplatSample(sample, client.getTickCount());
+		if (hitsplatSample != null)
+		{
+			resolveSample(sample, hitsplatSample.hitTick);
+			return;
+		}
+
+		if (pendingSamples.size() >= MAX_PENDING_SAMPLES)
+		{
+			pendingSamples.removeFirst();
+		}
+		pendingSamples.addLast(sample);
+	}
+
+	public void onHitsplatApplied(HitsplatApplied event)
+	{
+		if (!(event.getActor() instanceof Player))
 		{
 			return;
 		}
@@ -123,15 +127,25 @@ public class PidDetector
 			return;
 		}
 
-		int hitTick = client.getTickCount();
-		AttackSample sample = findMatchingSample(victimName, hitTick);
-		if (sample == null)
+		Hitsplat hitsplat = event.getHitsplat();
+		if (hitsplat == null || !isLocalOutgoingHitsplat(victim, hitsplat))
 		{
 			return;
 		}
 
-		int ticksFromCastToHit = hitTick - sample.attackTick;
-		currentPidStatus = analyzeAttack(sample.bucket, sample.distance, ticksFromCastToHit);
+		int hitTick = client.getTickCount();
+		AttackSample sample = findMatchingAttackSample(victimName, hitTick);
+		if (sample != null)
+		{
+			resolveSample(sample, hitTick);
+			return;
+		}
+
+		if (pendingHitsplats.size() >= MAX_PENDING_SAMPLES)
+		{
+			pendingHitsplats.removeFirst();
+		}
+		pendingHitsplats.addLast(new OutgoingHitsplatSample(hitTick, victimName));
 	}
 
 	private PidStatus analyzeAttack(AttackAnimationBuckets.Bucket bucket, int distance, int ticksFromCastToHit)
@@ -159,9 +173,10 @@ public class PidDetector
 		currentTarget = null;
 		currentPidStatus = PidStatus.UNKNOWN;
 		pendingSamples.clear();
+		pendingHitsplats.clear();
 	}
 
-	private AttackSample findMatchingSample(String victimName, int hitTick)
+	private AttackSample findMatchingAttackSample(String victimName, int hitTick)
 	{
 		Iterator<AttackSample> iterator = pendingSamples.iterator();
 		while (iterator.hasNext())
@@ -190,6 +205,35 @@ public class PidDetector
 		return null;
 	}
 
+	private OutgoingHitsplatSample findMatchingHitsplatSample(AttackSample attackSample, int currentTick)
+	{
+		Iterator<OutgoingHitsplatSample> iterator = pendingHitsplats.iterator();
+		while (iterator.hasNext())
+		{
+			OutgoingHitsplatSample hitsplatSample = iterator.next();
+			if (currentTick - hitsplatSample.hitTick > MAX_SAMPLE_AGE_TICKS)
+			{
+				iterator.remove();
+				continue;
+			}
+
+			if (!hitsplatSample.victimName.equalsIgnoreCase(attackSample.victimName))
+			{
+				continue;
+			}
+
+			int rawTicksFromCastToHit = hitsplatSample.hitTick - attackSample.attackTick;
+			if (rawTicksFromCastToHit < -EARLY_HITSPLAT_TOLERANCE_TICKS || rawTicksFromCastToHit > MAX_HIT_DELAY_TICKS)
+			{
+				continue;
+			}
+
+			iterator.remove();
+			return hitsplatSample;
+		}
+		return null;
+	}
+
 	private int expectedOnPidDelay(AttackAnimationBuckets.Bucket bucket, int distance)
 	{
 		switch (bucket)
@@ -201,7 +245,11 @@ public class PidDetector
 			case RANGED_THROWN:
 				return 1 + (int) Math.floor(distance / 6.0);
 			case RANGED_BALLISTA:
-				return distance <= 4 ? 2 : 3;
+				if (distance == 3 || distance == 4)
+				{
+					return 1;
+				}
+				return 1 + (int) Math.floor((3.0 + distance) / 6.0);
 			case RANGED_STANDARD:
 			default:
 				return 1 + (int) Math.floor((3.0 + distance) / 6.0);
@@ -240,6 +288,45 @@ public class PidDetector
 		}
 	}
 
+	private void pruneExpiredHitsplats(int currentTick)
+	{
+		Iterator<OutgoingHitsplatSample> iterator = pendingHitsplats.iterator();
+		while (iterator.hasNext())
+		{
+			OutgoingHitsplatSample sample = iterator.next();
+			if (currentTick - sample.hitTick > MAX_SAMPLE_AGE_TICKS)
+			{
+				iterator.remove();
+			}
+		}
+	}
+
+	private void resolveSample(AttackSample sample, int hitTick)
+	{
+		int rawTicksFromCastToHit = hitTick - sample.attackTick;
+		int ticksFromCastToHit = normalizeTicksFromCastToHit(rawTicksFromCastToHit);
+		if (ticksFromCastToHit < 0)
+		{
+			currentPidStatus = PidStatus.UNKNOWN;
+			return;
+		}
+
+		currentPidStatus = analyzeAttack(sample.bucket, sample.distance, ticksFromCastToHit);
+	}
+
+	private static int normalizeTicksFromCastToHit(int rawTicksFromCastToHit)
+	{
+		if (rawTicksFromCastToHit >= 0)
+		{
+			return rawTicksFromCastToHit;
+		}
+		if (rawTicksFromCastToHit >= -EARLY_HITSPLAT_TOLERANCE_TICKS)
+		{
+			return 0;
+		}
+		return -1;
+	}
+
 	private static int calculateDistance(Player attacker, Player target)
 	{
 		if (attacker == null || target == null || attacker.getWorldLocation() == null || target.getWorldLocation() == null)
@@ -251,14 +338,33 @@ public class PidDetector
 		return Math.max(dx, dy);
 	}
 
-	private static boolean isLocalOutgoingHitsplat(Hitsplat hitsplat)
+	private boolean isLocalOutgoingHitsplat(Player victim, Hitsplat hitsplat)
 	{
 		if (hitsplat.isMine())
 		{
 			return true;
 		}
+
 		int type = hitsplat.getHitsplatType();
-		return type == HitsplatID.DAMAGE_ME || type == HitsplatID.BLOCK_ME;
+		if (type == HitsplatID.DAMAGE_ME || type == HitsplatID.BLOCK_ME)
+		{
+			return true;
+		}
+
+		if (type != HitsplatID.DAMAGE_OTHER && type != HitsplatID.BLOCK_OTHER)
+		{
+			return false;
+		}
+
+		Player localPlayer = client.getLocalPlayer();
+		if (localPlayer == null || victim == null)
+		{
+			return false;
+		}
+
+		Actor localInteracting = localPlayer.getInteracting();
+		Actor victimInteracting = victim.getInteracting();
+		return localInteracting == victim || victimInteracting == localPlayer;
 	}
 
 	private static boolean isSamePlayer(Player a, Actor b)
@@ -284,6 +390,18 @@ public class PidDetector
 			this.victimName = victimName;
 			this.distance = distance;
 			this.bucket = bucket;
+		}
+	}
+
+	private static final class OutgoingHitsplatSample
+	{
+		private final int hitTick;
+		private final String victimName;
+
+		private OutgoingHitsplatSample(int hitTick, String victimName)
+		{
+			this.hitTick = hitTick;
+			this.victimName = victimName;
 		}
 	}
 }

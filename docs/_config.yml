@@ -1,4 +1,6 @@
 title: Live Pid
 description: RuneLite PvP plugin for real-time PID state indication
+url: https://noid-plugins.github.io
+baseurl: /live-pid-plugin
 theme: minima
 markdown: kramdown

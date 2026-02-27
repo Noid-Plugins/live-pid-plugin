@@ -1,38 +1,55 @@
 # Live Pid
 
-Live Pid is a RuneLite PvP plugin by **Noid** that shows your current PID state in real time.
+Live Pid is a RuneLite PvP plugin by **Noid** that displays your current PID state in real time.
 
-## What It Shows
+## Features
 
-- `Overlay` mode: a compact square `PID` box
-- `Above Head` mode: `PID` text above your local player
-
-PID colors:
-
+- Two display modes: `Overlay` box or `Above Head` text.
+- PID color states:
 - Green: on PID
 - Red: off PID
 - Yellow: unknown
+- Optional hide when out of combat (25 ticks with no own attack animation detected).
 
-## Detection Model
+## Detection Logic
 
-- Detects your own attack animation
-- Buckets animation IDs into melee, ranged, and magic timing profiles
-- Matches outgoing hitsplats against recent attack samples
-- Computes PID state using cast-to-hit tick timing and target distance
+- Tracks your own recognized attack animations.
+- Buckets animations into `MELEE`, `RANGED_STANDARD`, `RANGED_THROWN`, `RANGED_BALLISTA`, and `MAGIC`.
+- Resolves PID from attack-to-hitsplat timing and attacker-target distance.
+- Supports both match orders:
+- animation first, then hitsplat
+- hitsplat first, then animation
 
-## Plugin Config
+## Known Limitations
 
-- `Display Mode`: Overlay / Above head
-- `Text Size`: above-head label font size
-- `Hide Out Of Combat`: hides indicator after 25 ticks without your own detected attack animation
+- PID inference is based on observable client-side timing and may be `UNKNOWN` in edge cases.
+- Rapid target swaps, dead targets, and crowded multi-combat scenes can reduce match quality.
+- Animation bucket coverage is maintained manually and may require updates after game/client changes.
 
-## Build And Run
+## Configuration
+
+- `Display Mode`
+- `Text Size` (above-head mode)
+- `Hide Out Of Combat`
+
+## Compliance Notes
+
+- This plugin does not automate gameplay, input, or menu actions.
+- This plugin does not modify outgoing chat or account credentials.
+- This plugin is Java 11 compatible and packaged for RuneLite Plugin Hub workflows.
+
+## Development
 
 ```bash
 ./gradlew clean build
 ./gradlew run
 ```
 
-## Project Links
+Sideloaded jar output:
 
-- Repository documentation page: `https://noid-plugins.github.io/live-pid-plugin/`
+`build/libs/live-pid-plugin-1.0-SNAPSHOT.jar`
+
+## Links
+
+- Source: https://github.com/Noid-Plugins/live-pid-plugin
+- Documentation page: https://noid-plugins.github.io/live-pid-plugin/
