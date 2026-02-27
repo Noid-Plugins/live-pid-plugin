@@ -49,7 +49,10 @@ tasks.register('run', JavaExec) {
 	}
 	args "--developer-mode", "--debug"
 	def runeliteSafeMode = System.getenv("RUNELITE_SAFE_MODE")
-	if (runeliteSafeMode == null || !(runeliteSafeMode.trim().equalsIgnoreCase("0") || runeliteSafeMode.trim().equalsIgnoreCase("false"))) {
+	def disableSafeMode = runeliteSafeMode != null
+		&& (runeliteSafeMode.trim().equalsIgnoreCase("0")
+		|| runeliteSafeMode.trim().equalsIgnoreCase("false"))
+	if (!disableSafeMode) {
 		args "--safe-mode"
 	}
 	def runeliteExtraArgs = System.getenv("RUNELITE_EXTRA_ARGS")
