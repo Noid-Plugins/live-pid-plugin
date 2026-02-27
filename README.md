@@ -5,10 +5,7 @@ Live Pid is a RuneLite PvP plugin by **Noid** that displays your current PID sta
 ## Features
 
 - Two display modes: `Overlay` box or `Above Head` text.
-- PID color states:
-- Green: on PID
-- Red: off PID
-- Yellow: unknown
+- PID color states: Green = on PID, Red = off PID, Yellow = unknown.
 - Optional hide when out of combat (25 ticks with no own attack animation detected).
 
 ## Detection Logic
@@ -16,9 +13,7 @@ Live Pid is a RuneLite PvP plugin by **Noid** that displays your current PID sta
 - Tracks your own recognized attack animations.
 - Buckets animations into `MELEE`, `RANGED_STANDARD`, `RANGED_THROWN`, `RANGED_BALLISTA`, and `MAGIC`.
 - Resolves PID from attack-to-hitsplat timing and attacker-target distance.
-- Supports both match orders:
-- animation first, then hitsplat
-- hitsplat first, then animation
+- Supports both match orders: animation first then hitsplat, or hitsplat first then animation.
 
 ## Known Limitations
 
