@@ -5,8 +5,13 @@ import java.util.Deque;
 import java.util.Iterator;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
+import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.Hitsplat;
 import net.runelite.api.HitsplatID;
+import net.runelite.api.InventoryID;
+import net.runelite.api.Item;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.ItemComposition;
 import net.runelite.api.Player;
 import net.runelite.api.events.AnimationChanged;
 import net.runelite.api.events.HitsplatApplied;
@@ -21,6 +26,10 @@ public class PidDetector
 	private static final int MAX_SAMPLE_AGE_TICKS = 16;
 	private static final int MAX_HIT_DELAY_TICKS = 12;
 	private static final int EARLY_HITSPLAT_TOLERANCE_TICKS = 1;
+	private static final int RECOIL_MIN_DAMAGE = 1;
+	private static final int RECOIL_MAX_DAMAGE = 5;
+	private static final String RING_OF_RECOIL_NAME = "ring of recoil";
+	private static final String RING_OF_SUFFERING_PREFIX = "ring of suffering";
 
 	private final Client client;
 	private final Deque<AttackSample> pendingSamples = new ArrayDeque<>();
@@ -128,7 +137,17 @@ public class PidDetector
 		}
 
 		Hitsplat hitsplat = event.getHitsplat();
-		if (hitsplat == null || !isLocalOutgoingHitsplat(victim, hitsplat))
+		if (hitsplat == null)
+		{
+			return;
+		}
+
+		if (shouldIgnoreRecoilHitsplat(hitsplat))
+		{
+			return;
+		}
+
+		if (!isLocalOutgoingHitsplat(victim, hitsplat))
 		{
 			return;
 		}
@@ -370,6 +389,52 @@ public class PidDetector
 	private static boolean isSamePlayer(Player a, Actor b)
 	{
 		return a != null && b instanceof Player && a == b;
+	}
+
+	private boolean shouldIgnoreRecoilHitsplat(Hitsplat hitsplat)
+	{
+		int amount = hitsplat.getAmount();
+		if (amount < RECOIL_MIN_DAMAGE || amount > RECOIL_MAX_DAMAGE)
+		{
+			return false;
+		}
+		return isRecoilOrSufferingEquipped();
+	}
+
+	private boolean isRecoilOrSufferingEquipped()
+	{
+		ItemContainer equipmentContainer = client.getItemContainer(InventoryID.EQUIPMENT);
+		if (equipmentContainer == null)
+		{
+			return false;
+		}
+
+		Item[] equipment = equipmentContainer.getItems();
+		int ringSlot = EquipmentInventorySlot.RING.getSlotIdx();
+		if (equipment == null || ringSlot < 0 || ringSlot >= equipment.length)
+		{
+			return false;
+		}
+
+		Item ringItem = equipment[ringSlot];
+		if (ringItem == null)
+		{
+			return false;
+		}
+
+		return isRecoilOrSufferingRing(ringItem);
+	}
+
+	private boolean isRecoilOrSufferingRing(Item ringItem)
+	{
+		ItemComposition itemDefinition = client.getItemDefinition(ringItem.getId());
+		if (itemDefinition == null || itemDefinition.getName() == null)
+		{
+			return false;
+		}
+
+		String normalizedName = itemDefinition.getName().toLowerCase();
+		return normalizedName.equals(RING_OF_RECOIL_NAME) || normalizedName.startsWith(RING_OF_SUFFERING_PREFIX);
 	}
 
 	public PidStatus getCurrentPidStatus()
