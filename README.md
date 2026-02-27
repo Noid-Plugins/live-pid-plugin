@@ -48,3 +48,4 @@ Full checklist: [PLUGIN_HUB_SETUP.md](./PLUGIN_HUB_SETUP.md)
 ## Project Links
 
 - Repository documentation page: `https://noid-plugins.github.io/live-pid-plugin/`
+- Plugin Hub manifest example: [PLUGIN_HUB_MANIFEST_EXAMPLE.txt](./PLUGIN_HUB_MANIFEST_EXAMPLE.txt)

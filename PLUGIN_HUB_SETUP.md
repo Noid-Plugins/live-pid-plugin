@@ -84,6 +84,7 @@ Expected site URL pattern:
 3. Add one manifest file under `plugins/` in plugin-hub with:
 - `repository=<your plugin repo .git URL>`
 - `commit=<full 40-char commit hash>`
+Use [PLUGIN_HUB_MANIFEST_EXAMPLE.txt](./PLUGIN_HUB_MANIFEST_EXAMPLE.txt) as a template.
 4. Open PR against `runelite/plugin-hub`
 5. Pass all CI checks, then address maintainer feedback
 

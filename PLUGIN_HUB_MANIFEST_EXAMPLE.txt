@@ -1,0 +1,2 @@
+repository=https://github.com/Noid-Plugins/live-pid-plugin.git
+commit=1abba0a748392e8e9eb5da0c8cd9f0d721d6cc69
