@@ -1,13 +1,13 @@
-package com.example;
+package com.livepid;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
-public class ExamplePluginTest
+public class LivePidPluginTest
 {
 	public static void main(String[] args) throws Exception
 	{
-		ExternalPluginManager.loadBuiltin(ExamplePlugin.class);
+		ExternalPluginManager.loadBuiltin(LivePidPlugin.class);
 		RuneLite.main(args);
 	}
 }
